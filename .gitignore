@@ -6,3 +6,7 @@ go.sum
 go_build_clipOne.exe
 
 config.ini
+
+clipone.exe
+
+clipone.go
