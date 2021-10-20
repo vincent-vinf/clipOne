@@ -5,3 +5,14 @@ type Converter interface {
 	Decode([]byte) ([]byte, error)
 }
 
+type BaseConverter struct {
+}
+
+func (c *BaseConverter) Encode(data []byte) ([]byte, error) {
+	return data, nil
+}
+
+func (c *BaseConverter) Decode(data []byte) ([]byte, error) {
+	return data, nil
+
+}

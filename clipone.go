@@ -30,6 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	clipboard.UseCompress()
 	clipboard.UseEncryptor(deviceid.MD5([]byte(pass.Value())))
 
 	clipboardCtx, clipboardCancel := context.WithCancel(context.Background())

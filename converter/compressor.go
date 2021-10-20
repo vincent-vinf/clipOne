@@ -7,9 +7,10 @@ import (
 )
 
 type Compressor struct {
+	Converter Converter
 }
 
-func (c *Compressor) Encode(in []byte) ([]byte, error)  {
+func (c *Compressor) Encode(in []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	zw := gzip.NewWriter(&buf)
 	_, err := zw.Write(in)
@@ -17,7 +18,10 @@ func (c *Compressor) Encode(in []byte) ([]byte, error)  {
 		return nil, err
 	}
 
-	zw.Close()
+	err = zw.Close()
+	if err != nil {
+		return nil, err
+	}
 	return buf.Bytes(), nil
 }
 

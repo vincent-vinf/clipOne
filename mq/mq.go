@@ -6,6 +6,7 @@ import (
 	"context"
 	"github.com/streadway/amqp"
 	"log"
+	"sync"
 )
 
 const (
@@ -19,6 +20,7 @@ type MsgManager struct {
 	backData     []byte
 	ReceiveCh    chan []byte
 	url          string
+	rwLock       sync.RWMutex
 }
 
 func NewMsgManager(user, url string) *MsgManager {
@@ -112,9 +114,12 @@ func (m *MsgManager) Receive(ctx context.Context) error {
 		for {
 			select {
 			case d := <-msgCh:
+				m.rwLock.RLock()
 				if m.backData != nil && bytes.Equal(m.backData, d.Body) {
+					m.rwLock.RUnlock()
 					continue
 				}
+				m.rwLock.RUnlock()
 				m.ReceiveCh <- d.Body
 				log.Printf(" [receive]: data length:%d", len(d.Body))
 			case <-ctx.Done():
@@ -139,6 +144,8 @@ func (m *MsgManager) Send(data []byte) error {
 		log.Println("Failed to publish a message")
 		return err
 	}
+	m.rwLock.Lock()
 	m.backData = data
+	m.rwLock.Unlock()
 	return nil
 }

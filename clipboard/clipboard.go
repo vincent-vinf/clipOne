@@ -8,6 +8,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"golang.design/x/clipboard"
+	"sync"
 
 	"time"
 )
@@ -28,11 +29,15 @@ type Cell struct {
 	Source deviceid.DeviceID
 }
 
-func init()  {
-	convert = &converter.Compressor{}
+func init() {
+	convert = &converter.BaseConverter{}
 }
 
-func UseEncryptor(key []byte)  {
+func UseCompress() {
+	convert = &converter.Compressor{Converter: convert}
+}
+
+func UseEncryptor(key []byte) {
 	e := &converter.Encryptor{
 		Converter: convert,
 	}
@@ -68,6 +73,7 @@ func Decode(data []byte) (*Cell, error) {
 type Clipboard struct {
 	CellChan chan *Cell
 	backCell *Cell
+	rwLock   sync.RWMutex
 }
 
 func New() *Clipboard {
@@ -77,7 +83,9 @@ func New() *Clipboard {
 }
 
 func (c *Clipboard) Write(cell *Cell) error {
+	c.rwLock.Lock()
 	c.backCell = cell
+	c.rwLock.Unlock()
 	switch cell.Types {
 	case TypeText:
 		clipboard.Write(clipboard.FmtText, cell.Data)
@@ -101,18 +109,21 @@ func (c *Clipboard) Watching(ctx context.Context) {
 				continue
 			}
 			c.CellChan <- &Cell{
-				Time:   time.Now(),
-				Types:  TypeText,
-				Data:   data,
+				Time:  time.Now(),
+				Types: TypeText,
+				Data:  data,
 			}
 		case data := <-ch2:
+			c.rwLock.RLock()
 			if c.backCell != nil && bytes.Equal(c.backCell.Data, data) {
+				c.rwLock.RUnlock()
 				continue
 			}
+			c.rwLock.RUnlock()
 			c.CellChan <- &Cell{
-				Time:   time.Now(),
-				Types:  TypeImg,
-				Data:   data,
+				Time:  time.Now(),
+				Types: TypeImg,
+				Data:  data,
 			}
 		}
 	}
