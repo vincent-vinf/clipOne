@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io/ioutil"
+	"log"
 )
 
 type Compressor struct {
@@ -11,6 +12,8 @@ type Compressor struct {
 }
 
 func (c *Compressor) Encode(in []byte) ([]byte, error) {
+	log.Println("source size:", len(in))
+
 	var buf bytes.Buffer
 	zw := gzip.NewWriter(&buf)
 	_, err := zw.Write(in)
@@ -22,6 +25,7 @@ func (c *Compressor) Encode(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println("compress size:", buf.Len())
 	return buf.Bytes(), nil
 }
 

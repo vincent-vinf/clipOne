@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package="./;cell";
+
+import "google/protobuf/timestamp.proto";
+
+message Cell{
+  google.protobuf.Timestamp Time = 1;
+  string Types = 2;
+  bytes Data = 3;
+}

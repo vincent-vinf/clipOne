@@ -2,8 +2,8 @@ package main
 
 import (
 	"clipOne/clipboard"
-	"clipOne/deviceid"
 	"clipOne/mq"
+	"clipOne/util"
 	"context"
 	"fmt"
 	"gopkg.in/ini.v1"
@@ -30,8 +30,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	clipboard.UseCompress()
-	clipboard.UseEncryptor(deviceid.MD5([]byte(pass.Value())))
+	// Compression is not necessary. In general, shorter strings are transmitted. Compression will make the data larger (because of the addition of compressed metadata)
+	//clipboard.UseCompress()
+	clipboard.UseEncryptor(util.MD5([]byte(pass.Value())))
 
 	clipboardCtx, clipboardCancel := context.WithCancel(context.Background())
 	clipboardM := clipboard.New()
@@ -75,7 +76,7 @@ func main() {
 			for {
 				select {
 				case cell := <-clipboardM.CellChan:
-					data, err := cell.Encode()
+					data, err := clipboard.Encode(cell)
 					if err != nil {
 						log.Println("encode fail: ", err)
 						continue
@@ -86,7 +87,7 @@ func main() {
 						continue
 					}
 
-					log.Println("send: ", cell.Time)
+					log.Printf("send length: %d", len(data))
 				case data := <-msgManager.ReceiveCh:
 					if len(data) == 0 {
 						log.Println("empty payload, reconnect")
@@ -98,7 +99,7 @@ func main() {
 						log.Println("decode fail: ", err)
 						continue
 					}
-					//log.Println("delay: ", time.Now().Sub(c.Time))
+					log.Printf(" receive length: %d", len(data))
 					err = clipboardM.Write(c)
 					if err != nil {
 						log.Println("write fail: ", err)

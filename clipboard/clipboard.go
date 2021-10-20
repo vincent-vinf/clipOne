@@ -2,15 +2,14 @@ package clipboard
 
 import (
 	"bytes"
+	"clipOne/clipboard/cell"
 	"clipOne/converter"
-	"clipOne/deviceid"
 	"context"
-	"encoding/gob"
 	"fmt"
 	"golang.design/x/clipboard"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"sync"
-
-	"time"
 )
 
 const (
@@ -21,13 +20,6 @@ const (
 var (
 	convert converter.Converter
 )
-
-type Cell struct {
-	Time   time.Time
-	Types  string
-	Data   []byte
-	Source deviceid.DeviceID
-}
 
 func init() {
 	convert = &converter.BaseConverter{}
@@ -45,44 +37,44 @@ func UseEncryptor(key []byte) {
 	convert = e
 }
 
-func (c *Cell) Encode() ([]byte, error) {
-	var buff bytes.Buffer
-	enc := gob.NewEncoder(&buff)
-	err := enc.Encode(c)
+func Encode(c *cell.Cell) ([]byte, error) {
+	data, err := proto.Marshal(c)
 	if err != nil {
 		return nil, err
 	}
-	out, err := convert.Encode(buff.Bytes())
+	out, err := convert.Encode(data)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func Decode(data []byte) (*Cell, error) {
+func Decode(data []byte) (*cell.Cell, error) {
 	data, err := convert.Decode(data)
 	if err != nil {
 		return nil, err
 	}
-	c := &Cell{}
-	dec := gob.NewDecoder(bytes.NewBuffer(data))
-	err = dec.Decode(c)
+	c := &cell.Cell{}
+	err = proto.Unmarshal(data, c)
+	if err != nil {
+		return nil, err
+	}
 	return c, err
 }
 
 type Clipboard struct {
-	CellChan chan *Cell
-	backCell *Cell
+	CellChan chan *cell.Cell
+	backCell *cell.Cell
 	rwLock   sync.RWMutex
 }
 
 func New() *Clipboard {
 	return &Clipboard{
-		CellChan: make(chan *Cell, 1),
+		CellChan: make(chan *cell.Cell, 1),
 	}
 }
 
-func (c *Clipboard) Write(cell *Cell) error {
+func (c *Clipboard) Write(cell *cell.Cell) error {
 	c.rwLock.Lock()
 	c.backCell = cell
 	c.rwLock.Unlock()
@@ -108,8 +100,8 @@ func (c *Clipboard) Watching(ctx context.Context) {
 			if c.backCell != nil && bytes.Equal(c.backCell.Data, data) {
 				continue
 			}
-			c.CellChan <- &Cell{
-				Time:  time.Now(),
+			c.CellChan <- &cell.Cell{
+				Time:  timestamppb.Now(),
 				Types: TypeText,
 				Data:  data,
 			}
@@ -120,8 +112,8 @@ func (c *Clipboard) Watching(ctx context.Context) {
 				continue
 			}
 			c.rwLock.RUnlock()
-			c.CellChan <- &Cell{
-				Time:  time.Now(),
+			c.CellChan <- &cell.Cell{
+				Time:  timestamppb.Now(),
 				Types: TypeImg,
 				Data:  data,
 			}

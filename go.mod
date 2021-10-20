@@ -3,9 +3,10 @@ module clipOne
 go 1.17
 
 require (
-	github.com/denisbrodbeck/machineid v1.0.1
+	github.com/golang/protobuf v1.5.2
 	github.com/streadway/amqp v1.0.0
 	golang.design/x/clipboard v0.5.3
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/ini.v1 v1.63.2
 )
 

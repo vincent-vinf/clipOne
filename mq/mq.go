@@ -2,7 +2,6 @@ package mq
 
 import (
 	"bytes"
-	"clipOne/deviceid"
 	"context"
 	"github.com/streadway/amqp"
 	"log"
@@ -10,7 +9,7 @@ import (
 )
 
 const (
-	baseExchangeName = deviceid.AppName
+	baseExchangeName = "clipOne"
 )
 
 type MsgManager struct {
@@ -121,7 +120,6 @@ func (m *MsgManager) Receive(ctx context.Context) error {
 				}
 				m.rwLock.RUnlock()
 				m.ReceiveCh <- d.Body
-				log.Printf(" [receive]: data length:%d", len(d.Body))
 			case <-ctx.Done():
 				log.Println(" [receive]: ctx done!")
 				return
