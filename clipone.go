@@ -2,6 +2,7 @@ package main
 
 import (
 	"clipOne/clipboard"
+	"clipOne/filter"
 	"clipOne/mq"
 	"clipOne/util"
 	"context"
@@ -33,6 +34,15 @@ func main() {
 	// Compression is not necessary. In general, shorter strings are transmitted. Compression will make the data larger (because of the addition of compressed metadata)
 	//clipboard.UseCompress()
 	clipboard.UseEncryptor(util.MD5([]byte(pass.Value())))
+	//log.Println(pass.Value())
+	//log.Println([]byte(pass.Value()))
+	//log.Println(util.MD5([]byte(pass.Value())))
+
+	taobaoFilter := &filter.TaobaoLink{}
+	codeFilter := filter.NewVerificationCode()
+
+	taobaoFilter.SetNext(codeFilter)
+	var filter_ filter.Filter = taobaoFilter
 
 	clipboardCtx, clipboardCancel := context.WithCancel(context.Background())
 	clipboardM := clipboard.New()
@@ -76,6 +86,11 @@ func main() {
 			for {
 				select {
 				case cell := <-clipboardM.CellChan:
+					cell = filter_.Execute(cell)
+					if cell == nil {
+						log.Println("Filter cell")
+						continue
+					}
 					data, err := clipboard.Encode(cell)
 					if err != nil {
 						log.Println("encode fail: ", err)

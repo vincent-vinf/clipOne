@@ -54,6 +54,7 @@ func Decode(data []byte) (*cell.Cell, error) {
 	if err != nil {
 		return nil, err
 	}
+	//log.Println(data)
 	c := &cell.Cell{}
 	err = proto.Unmarshal(data, c)
 	if err != nil {
