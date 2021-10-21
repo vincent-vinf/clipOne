@@ -4,6 +4,7 @@ import (
 	"clipOne/clipboard"
 	"clipOne/filter"
 	"clipOne/mq"
+	"clipOne/ui"
 	"clipOne/util"
 	"context"
 	"fmt"
@@ -43,79 +44,83 @@ func main() {
 		ctx        context.Context
 	)
 
-	for {
-		select {
-		case <-reconnectCh:
-			msgManager = mq.NewMsgManager(util.User, util.Url)
-			cancel = nil
-			err := msgManager.Init()
-			if err != nil {
-				log.Println("init msg fail")
-				msgManager = nil
-				errCh <- err
-				continue
-			}
+	go func() {
+		for {
+			select {
+			case <-reconnectCh:
+				msgManager = mq.NewMsgManager(util.User, util.Url)
+				cancel = nil
+				err := msgManager.Init()
+				if err != nil {
+					log.Println("init msg fail")
+					msgManager = nil
+					errCh <- err
+					continue
+				}
 
-			ctx, cancel = context.WithCancel(context.Background())
-			err = msgManager.Receive(ctx)
-			if err != nil {
-				log.Println("init msg receive err")
-				errCh <- err
-				continue
-			}
+				ctx, cancel = context.WithCancel(context.Background())
+				err = msgManager.Receive(ctx)
+				if err != nil {
+					log.Println("init msg receive err")
+					errCh <- err
+					continue
+				}
 
-			log.Println("rabbitMQZ init success")
-		Deal:
-			for {
-				select {
-				case cell := <-clipboardM.CellChan:
-					cell = filter_.Execute(cell)
-					if cell == nil {
-						log.Println("Filter cell")
-						continue
-					}
-					data, err := clipboard.Encode(cell)
-					if err != nil {
-						log.Println("encode fail: ", err)
-						continue
-					}
-					err = msgManager.Send(data)
-					if err != nil {
-						log.Println("send fail: ", err)
-						continue
-					}
+				log.Println("rabbitMQZ init success")
+			Deal:
+				for {
+					select {
+					case cell := <-clipboardM.CellChan:
+						cell = filter_.Execute(cell)
+						if cell == nil {
+							log.Println("Filter cell")
+							continue
+						}
+						data, err := clipboard.Encode(cell)
+						if err != nil {
+							log.Println("encode fail: ", err)
+							continue
+						}
+						err = msgManager.Send(data)
+						if err != nil {
+							log.Println("send fail: ", err)
+							continue
+						}
 
-					log.Printf("send length: %d", len(data))
-				case data := <-msgManager.ReceiveCh:
-					if len(data) == 0 {
-						log.Println("empty payload, reconnect")
-						errCh <- fmt.Errorf("empty payload")
-						break Deal
-					}
-					c, err := clipboard.Decode(data)
-					if err != nil {
-						log.Println("decode fail: ", err)
-						continue
-					}
-					log.Printf(" receive length: %d", len(data))
-					err = clipboardM.Write(c)
-					if err != nil {
-						log.Println("write fail: ", err)
-						continue
+						log.Printf("send length: %d", len(data))
+					case data := <-msgManager.ReceiveCh:
+						if len(data) == 0 {
+							log.Println("empty payload, reconnect")
+							errCh <- fmt.Errorf("empty payload")
+							break Deal
+						}
+						c, err := clipboard.Decode(data)
+						if err != nil {
+							log.Println("decode fail: ", err)
+							continue
+						}
+						log.Printf(" receive length: %d", len(data))
+						err = clipboardM.Write(c)
+						if err != nil {
+							log.Println("write fail: ", err)
+							continue
+						}
 					}
 				}
+			case err := <-errCh:
+				log.Println("err: ", err)
+				if cancel != nil {
+					cancel()
+				}
+				if msgManager != nil {
+					msgManager.Close()
+				}
+				clipboardM.Clean()
+				reconnectCh <- struct{}{}
+				<-time.After(time.Second * 3)
 			}
-		case err := <-errCh:
-			log.Println("err: ", err)
-			if cancel != nil {
-				cancel()
-			}
-			if msgManager != nil {
-				msgManager.Close()
-			}
-			clipboardM.Clean()
-			reconnectCh <- struct{}{}
-			<-time.After(time.Second * 3)
 		}
-	}
+	}()
+
+	ui.Run()
 }

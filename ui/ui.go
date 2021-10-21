@@ -1,22 +1,22 @@
-package main
+package ui
 
 import (
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
 
-func main() {
+func Run() {
 	a := app.New()
-	w := a.NewWindow("Hello")
+	w := a.NewWindow("clipOne")
 
-	hello := widget.NewLabel("Hello Fyne!")
-	w.SetContent(container.NewVBox(
+	hello := widget.NewLabel("Let me stay here!")
+	center := container.NewCenter(
 		hello,
-		widget.NewButton("Hi!", func() {
-			hello.SetText("Welcome :)")
-		}),
-	))
+	)
+	w.Resize(fyne.NewSize(240, 80))
+	w.SetContent(center)
 
 	w.ShowAndRun()
 }
