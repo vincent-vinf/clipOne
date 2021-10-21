@@ -9,3 +9,8 @@ config.ini
 
 clipone.exe
 
+/clipboard/cell/cell.pbenum.dart
+/clipboard/cell/cell.pbjson.dart
+/clipboard/cell/cell.pbserver.dart
+/clipboard/cell/cell.pb.dart
+/clipboard/cell/google/
