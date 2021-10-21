@@ -7,33 +7,16 @@ import (
 	"clipOne/util"
 	"context"
 	"fmt"
-	"gopkg.in/ini.v1"
 	"log"
 	"time"
 )
 
 func main() {
-	cfg, err := ini.Load("config.ini")
-	if err != nil {
-		log.Fatal(err)
-	}
-	sec := cfg.Section(ini.DefaultSection)
-	user, err := sec.GetKey("user")
-	if err != nil {
-		log.Fatal(err)
-	}
-	pass, err := sec.GetKey("password")
-	if err != nil {
-		log.Fatal(err)
-	}
-	url, err := sec.GetKey("url")
-	if err != nil {
-		log.Fatal(err)
-	}
+	util.LoadConfig()
 
 	// Compression is not necessary. In general, shorter strings are transmitted. Compression will make the data larger (because of the addition of compressed metadata)
 	//clipboard.UseCompress()
-	clipboard.UseEncryptor(util.MD5([]byte(pass.Value())))
+	clipboard.UseEncryptor(util.MD5([]byte(util.Password)))
 	//log.Println(pass.Value())
 	//log.Println([]byte(pass.Value()))
 	//log.Println(util.MD5([]byte(pass.Value())))
@@ -63,7 +46,7 @@ func main() {
 	for {
 		select {
 		case <-reconnectCh:
-			msgManager = mq.NewMsgManager(user.Value(), url.Value())
+			msgManager = mq.NewMsgManager(util.User, util.Url)
 			cancel = nil
 			err := msgManager.Init()
 			if err != nil {
